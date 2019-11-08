@@ -1,3 +1,9 @@
+# __author__ = "Ivan Gruber"
+# __credits__ = ["Pix2pix developer team]
+# __version__ = "1.0"
+# __maintainer__ = "Ivan Gruber"
+# __email__ = "grubiv@kky.zcu.cz"
+
 import torch
 import itertools
 from .base_model import BaseModel
