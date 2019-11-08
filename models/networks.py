@@ -147,10 +147,19 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
         net = UnetGenerator(input_nc, output_nc, 7, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     elif netG == 'unet_256':
         net = UnetGenerator(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
+    elif netG == 'Yvan':
+        net = Encoder(input_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
 
+def define_Dec(output_nc, ngf, norm='batch', init_type='normal', init_gain=0.02, gpu_ids=[]):
+
+    net = None
+    norm_layer = get_norm_layer(norm_type=norm)
+
+    net = Decoder(output_nc, ngf, norm_layer=norm_layer)
+    return init_net(net, init_type, init_gain, gpu_ids)
 
 def define_D(input_nc, ndf, netD, n_layers_D=3, norm='batch', init_type='normal', init_gain=0.02, gpu_ids=[]):
     """Create a discriminator
@@ -425,6 +434,67 @@ class ResnetBlock(nn.Module):
         """Forward function (with skip connections)"""
         out = x + self.conv_block(x)  # add skip connections
         return out
+
+class Encoder(nn.Module):
+    """Create an Encoder with share part of both Decoders"""
+
+    def __init__(self, input_nc, num_downs, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False):
+
+        super(Encoder, self).__init__()
+        # construct encoder structure
+        if type(norm_layer) == functools.partial:
+            use_bias = norm_layer.func == nn.InstanceNorm2d
+        else:
+            use_bias = norm_layer == nn.InstanceNorm2d
+        model = [nn.Conv2d(input_nc, ngf, kernel_size=4, stride=2, padding=1, bias=use_bias),
+                 nn.LeakyReLU(0.2, True)]
+        model += [nn.Conv2d(ngf, ngf * 2, kernel_size=4, stride=2, padding=1, bias=use_bias),
+                 norm_layer(ngf * 2),
+                  nn.LeakyReLU(0.2, True)]
+        model += [nn.Conv2d(ngf * 2, ngf * 4, kernel_size=4, stride=2, padding=1, bias=use_bias),
+                 norm_layer(ngf * 4),
+                 nn.LeakyReLU(0.2, True)]
+        model += [nn.Conv2d(ngf * 4, ngf * 8, kernel_size=4, stride=2, padding=1, bias=use_bias),
+                 norm_layer(ngf * 8)]
+        unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None, submodule=None, norm_layer=norm_layer, innermost=True)  # add the innermost layer
+        for i in range(num_downs - 5):          # add intermediate layers with ngf * 8 filters
+            unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None, submodule=unet_block, norm_layer=norm_layer, use_dropout=use_dropout)
+        # gradually reduce the number of filters from ngf * 8 to ngf
+        # model = unet_block(model())
+        self.model = nn.Sequential(*model, unet_block)
+    def forward(self, input):
+        """Standard forward"""
+        return self.model(input)
+
+class Decoder(nn.Module):
+    """Create rest of the decoder"""
+
+    def __init__(self, output_nc, ngf=64, norm_layer=nn.BatchNorm2d):
+
+        super(Decoder, self).__init__()
+        # construct decoder structure
+        if type(norm_layer) == functools.partial:
+            use_bias = norm_layer.func == nn.InstanceNorm2d
+        else:
+            use_bias = norm_layer == nn.InstanceNorm2d
+        model = [nn.ConvTranspose2d(ngf * 16, ngf * 4, kernel_size=4, stride=2, padding=1),
+                 norm_layer(ngf * 4),
+                 nn.ReLU(True)]
+        model += [nn.ConvTranspose2d(ngf * 4, ngf * 2, kernel_size=4, stride=2, padding=1),
+                 norm_layer(ngf * 2),
+                 nn.ReLU(True)]
+        model += [nn.ConvTranspose2d(ngf * 2, ngf, kernel_size=4, stride=2, padding=1),
+                 norm_layer(ngf),
+                 nn.ReLU(True)]
+        model += [nn.ConvTranspose2d(ngf, output_nc, kernel_size=4, stride=2, padding=1),
+                 nn.Tanh()]
+
+
+        self.model = nn.Sequential(*model)
+
+    def forward(self, input):
+        """Standard forward"""
+        return self.model(input)
 
 
 class UnetGenerator(nn.Module):

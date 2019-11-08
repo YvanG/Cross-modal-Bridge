@@ -3,7 +3,7 @@ import torch
 from collections import OrderedDict
 from abc import ABC, abstractmethod
 from . import networks
-
+from torchsummary import summary
 
 class BaseModel(ABC):
     """This class is an abstract base class (ABC) for models.
@@ -209,6 +209,8 @@ class BaseModel(ABC):
                 if verbose:
                     print(net)
                 print('[Network %s] Total number of parameters : %.3f M' % (name, num_params / 1e6))
+                print(net)
+                # summary(net, input_size=(3,256,256))
         print('-----------------------------------------------')
 
     def set_requires_grad(self, nets, requires_grad=False):
