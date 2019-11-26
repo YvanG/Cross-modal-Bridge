@@ -147,19 +147,32 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
         net = UnetGenerator(input_nc, output_nc, 7, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     elif netG == 'unet_256':
         net = UnetGenerator(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
-    elif netG == 'Yvan':
+    elif netG == 'XBridge':
         net = Encoder(input_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
 
-def define_Dec(output_nc, ngf, norm='batch', init_type='normal', init_gain=0.02, gpu_ids=[]):
 
+def define_Dec(output_nc, ngf, norm='batch', init_type='normal', init_gain=0.02, gpu_ids=[]):
+    """Create a Decoder for X-Bridge
+
+    Parameters:
+          output_nc (int) -- the number of channels in output images
+          ngf (int) -- the number of filters in the last conv layer
+          norm (str) -- the name of normalization layers used in the network: batch | instance | none
+          init_type (str)    -- the name of our initialization method.
+          init_gain (float)  -- scaling factor for normal, xavier and orthogonal.
+          gpu_ids (int list) -- which GPUs the network runs on: e.g., 0,1,2
+
+    Returns a Decoder
+    """
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
 
     net = Decoder(output_nc, ngf, norm_layer=norm_layer)
     return init_net(net, init_type, init_gain, gpu_ids)
+
 
 def define_D(input_nc, ndf, netD, n_layers_D=3, norm='batch', init_type='normal', init_gain=0.02, gpu_ids=[]):
     """Create a discriminator
@@ -436,10 +449,18 @@ class ResnetBlock(nn.Module):
         return out
 
 class Encoder(nn.Module):
-    """Create an Encoder with share part of both Decoders"""
+    """Create X-Bridge Encoder with share part of both Decoders"""
 
     def __init__(self, input_nc, num_downs, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False):
+        """Construct X-Bridge encoder
+                Parameters:
+                    input_nc (int)  -- the number of channels in input images
+                    num_downs (int) -- the number of downsamplings in UNet. For example, # if |num_downs| == 7,
+                                        image of size 128x128 will become of size 1x1 # at the bottleneck
+                    ngf (int)       -- the number of filters in the last conv layer
+                    norm_layer      -- normalization layer
 
+        """
         super(Encoder, self).__init__()
         # construct encoder structure
         if type(norm_layer) == functools.partial:
@@ -460,17 +481,24 @@ class Encoder(nn.Module):
         for i in range(num_downs - 5):          # add intermediate layers with ngf * 8 filters
             unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None, submodule=unet_block, norm_layer=norm_layer, use_dropout=use_dropout)
         # gradually reduce the number of filters from ngf * 8 to ngf
-        # model = unet_block(model())
         self.model = nn.Sequential(*model, unet_block)
+
     def forward(self, input):
         """Standard forward"""
         return self.model(input)
 
+
 class Decoder(nn.Module):
-    """Create rest of the decoder"""
+    """Create rest of the X-Bridge Decoder"""
 
     def __init__(self, output_nc, ngf=64, norm_layer=nn.BatchNorm2d):
+        """Construct X-Bridge encoder
+                Parameters:
+                    output_nc (int) -- the number of channels in output images
+                    ngf (int)       -- the number of filters in the last conv layer
+                    norm_layer      -- normalization layer
 
+        """
         super(Decoder, self).__init__()
         # construct decoder structure
         if type(norm_layer) == functools.partial:

@@ -6,3 +6,5 @@ python test.py --dataroot ./datasets/feret_sketch --name feret_sketch2 --model p
 python train.py --dataroot ./datasets/feret_sketch_highres --name feret_sketch_my --model my --direction AtoB
 python test.py --dataroot ./datasets/feret_sketch_highres --name feret_sketch_my --model my --direction AtoB
 python test.py --dataroot ./datasets/feret_sketch_highres --name feret_sketch_my_BtoA2 --model my --direction BtoA
+
+python test.py --dataroot ./datasets/feret_sketch_highres --name feret_sketch_my_BtoA2 --model XBridge --direction BtoA
