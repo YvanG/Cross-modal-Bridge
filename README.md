@@ -50,7 +50,8 @@ the left, whereas, the reconstruction path on the right.
  ```
  python train.py --dataroot ./datasets/feret_sketch_highres --name feret_sketch_my --model XBridge --direction AtoB
  ```
- 
+Switch `AtoB` to `BtoA` to train translation in opposite direction.
+
 ### Testing
  ```
  python test.py --dataroot ./datasets/feret_sketch_highres --name feret_sketch_my --model XBridge --direction AtoB
