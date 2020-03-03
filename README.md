@@ -43,6 +43,7 @@ the left, whereas, the reconstruction path on the right.
 ![rotation2](imgs/rotation_2.png)
 
 **Real-world image translation**
+
 ![me](imgs/ja.png)
 
 ### Acknowledgement
