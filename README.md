@@ -10,12 +10,14 @@ _**Heteroheneous Face Recognition from Facial Sketches**_.
 ### Method overview
 
 X-Bridge is supervised method (i.e. needs image pairs for the training) based on Generative Adversarial Networks
-for image-to-image translation. It is combining ideas from both older approaches - 
-[pix2pix](https://phillipi.github.io/pix2pix/) and [UNIT](https://github.com/mingyuliutw/UNIT). To be more specific, 
-the usage of L1 loss and conditional discriminator from Pix2pix, and the idea of shared-latent space from UNIT. By 
-combining these ideas and by adding of a reconstruction path, I reached very realistic and precise results 
-in image-to-sketch and sketch-to-image translation tasks. In this task, the X-Bridge method provides 
-better generalization comparing to Pix2pix and also better detail generation comparing to UNIT.
+for image-to-image translation.  The main goal of the method is to bridge the differences between two different 
+modalities (image, sketch) in the heterogeneous face recognition task. It is combining ideas from both older
+approaches - [pix2pix](https://phillipi.github.io/pix2pix/) and [UNIT](https://github.com/mingyuliutw/UNIT).
+To be more specific, the usage of L1 loss and conditional discriminator from Pix2pix, and the idea of 
+shared-latent space from UNIT. By combining these ideas and by adding of a reconstruction path, it was 
+reached very realistic and precise results in image-to-sketch and sketch-to-image translation tasks.
+In these tasks, the X-Bridge method provides better generalization comparing to Pix2pix and also better 
+detail generation comparing to UNIT.
 
 X-Bridge pipeline. _E_ = encoder, _G1_;_G2_ = generators, _D1_;_D2_ = discriminators, 
 z = latent space. Dotted line indicates L1 loss. xr is real input from the first domain, x^f is
