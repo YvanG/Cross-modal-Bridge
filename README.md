@@ -9,7 +9,8 @@ _**Heteroheneous Face Recognition from Facial Sketches**_.
 
 ### Method overview
 
-X-Bridge is supervised method (i.e. needs image pairs for the training) combining ideas from both older approaches - 
+X-Bridge is supervised method (i.e. needs image pairs for the training) based on Generative Adversarial Networks
+for image-to-image translation. It is combining ideas from both older approaches - 
 [pix2pix](https://phillipi.github.io/pix2pix/) and [UNIT](https://github.com/mingyuliutw/UNIT). To be more specific, 
 the usage of L1 loss and conditional discriminator from Pix2pix, and the idea of shared-latent space from UNIT. By 
 combining these ideas and by adding of a reconstruction path, I reached very realistic and precise results 
