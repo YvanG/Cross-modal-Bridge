@@ -24,9 +24,6 @@ class cityscapes:
     def get_dset(self, split):
         '''
         List images as (city, id) for the specified split
-
-        TODO(shelhamer) generate splits from cityscapes itself, instead of
-        relying on these separately made text files.
         '''
         if split == 'train':
             dataset = open('{}/ImageSets/segFine/train.txt'.format(self.dir)).read().splitlines()
