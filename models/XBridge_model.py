@@ -72,11 +72,13 @@ class XBridgeModel(BaseModel):
             self.criterionGAN = networks.GANLoss(opt.gan_mode).to(self.device)
             self.criterionL1 = torch.nn.L1Loss()
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
-            self.optimizer_G1 = torch.optim.Adam(itertools.chain(self.netE.parameters(), self.netDEC1.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999)) # translation path
-            self.optimizer_G2 = torch.optim.Adam(itertools.chain(self.netE.parameters(), self.netDEC2.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999)) # reconstruction path
-            self.optimizer_D = torch.optim.Adam(itertools.chain(self.netD1.parameters(), self.netD2.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))
-            self.optimizers.append(self.optimizer_G1)
-            self.optimizers.append(self.optimizer_G2)
+            self.optimizer_G = torch.optim.Adam(itertools.chain(self.netE.parameters(), self.netDEC1.parameters(), self.netDEC2.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))     # generators
+            self.optimizer_D = torch.optim.Adam(itertools.chain(self.netD1.parameters(), self.netD2.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))     # discriminators
+            # self.optimizer_G1 = torch.optim.Adam(itertools.chain(self.netE.parameters(), self.netDEC1.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999)) # translation path
+            # self.optimizer_G2 = torch.optim.Adam(itertools.chain(self.netE.parameters(), self.netDEC2.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999)) # reconstruction path
+            # self.optimizers.append(self.optimizer_G1)
+            # self.optimizers.append(self.optimizer_G2)
+            self.optimizers.append(self.optimizer_G)
             self.optimizers.append(self.optimizer_D)
 
     def set_input(self, input):
@@ -121,12 +123,34 @@ class XBridgeModel(BaseModel):
         self.loss_D2_real = self.criterionGAN(pred_real, True)
         loss_D2 = (self.loss_D2_real + self.loss_D2_fake) * 0.5
         loss_D2.backward()
-        return loss_D2
 
+    #Depricated version, doesn't work in Pytorch1.5
+    # def backward_G1(self):
+    #     """Calculate GAN and L1 loss for the translation generator"""
+    #     # First, G(A) should fake the discriminator D1
+    #     fake_AB = torch.cat((self.real_A, self.fake_B), 1)
+    #     pred_fake = self.netD1(fake_AB)
+    #     self.loss_G1_GAN = self.criterionGAN(pred_fake, True)
+    #     # Second, G(A) = B
+    #     self.loss_G1_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
+    #     # combine loss and calculate gradients
+    #     self.loss_G1 = self.loss_G1_GAN + self.loss_G1_L1
+    #     self.loss_G1.backward()
+    #
+    # def backward_G2(self):
+    #     """Calculate GAN and L1 loss for the reconstruction generator"""
+    #     # First, G(A) should fake the discriminator D2
+    #     pred_fake = self.netD2(self.fake_A)
+    #     self.loss_G2_GAN = self.criterionGAN(pred_fake, True)
+    #     # Second, G(A) = B
+    #     self.loss_G2_L1 = self.criterionL1(self.fake_A, self.real_A) * self.opt.lambda_L1
+    #     # combine loss and calculate gradients
+    #     self.loss_G2 = (self.loss_G2_GAN + self.loss_G2_L1) * self.opt.lambda_G2
+    #     self.loss_G2.backward()
 
-    def backward_G1(self):
-        """Calculate GAN and L1 loss for the translation generator"""
-        # First, G(A) should fake the discriminator D1
+    def backward_G(self):
+        """Calculate GAN and L1 loss for both generators"""
+        # First, G_1(A) should fake the discriminator D1
         fake_AB = torch.cat((self.real_A, self.fake_B), 1)
         pred_fake = self.netD1(fake_AB)
         self.loss_G1_GAN = self.criterionGAN(pred_fake, True)
@@ -134,18 +158,15 @@ class XBridgeModel(BaseModel):
         self.loss_G1_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
         # combine loss and calculate gradients
         self.loss_G1 = self.loss_G1_GAN + self.loss_G1_L1
-        self.loss_G1.backward()
-
-    def backward_G2(self):
-        """Calculate GAN and L1 loss for the reconstruction generator"""
-        # First, G(A) should fake the discriminator D2
         pred_fake = self.netD2(self.fake_A)
+        # Third, G_2(A) should fake the discriminator D2
         self.loss_G2_GAN = self.criterionGAN(pred_fake, True)
-        # Second, G(A) = B
+        # Fourth, G(A) = B
         self.loss_G2_L1 = self.criterionL1(self.fake_A, self.real_A) * self.opt.lambda_L1
         # combine loss and calculate gradients
         self.loss_G2 = (self.loss_G2_GAN + self.loss_G2_L1) * self.opt.lambda_G2
-        self.loss_G2.backward()
+        self.loss_G = self.loss_G1+self.loss_G2
+        self.loss_G.backward()
 
     def optimize_parameters(self):
         self.forward()                   # compute fake images: G(A)
@@ -156,14 +177,19 @@ class XBridgeModel(BaseModel):
         self.backward_D2()               # calculate gradients for D2
         self.optimizer_D.step()          # update Ds's weights
 
-        # update G1
+        # update G1+G2
         self.set_requires_grad([self.netD1, self.netD2], False)  # D requires no gradients when optimizing G
-        self.optimizer_G1.zero_grad()        # set G1's gradients to zero
-        self.backward_G1()                   # calculate gradients for G1
-        self.optimizer_G1.step()             # udpate G1's weights
+        self.optimizer_G.zero_grad()         # set Gs' gradients to zero
+        self.backward_G()                    # calculate gradients for G1+G2
+        self.optimizer_G.step()              # update Gs' weights
 
-        #update G2
-        self.set_requires_grad([self.netD1, self.netD2], False)  # D requires no gradients when optimizing G
-        self.optimizer_G2.zero_grad()        # set G2's gradients to zero
-        self.backward_G2()                   # calculate gradients for G2
-        self.optimizer_G2.step()             # udpate G2's weights
+        # self.optimizer_G1.zero_grad()        # set G1's gradients to zero
+        # self.optimizer_G2.zero_grad()        # set G2's gradients to zero
+
+        # self.backward_G1()                   # calculate gradients for G1
+        # self.backward_G2()                   # calculate gradients for G2
+        #
+        # self.optimizer_G1.step()             # update G1's weights
+        # self.optimizer_G2.step()             # update G2's weights
+
+        # self.netE.module.model[0].weight.grad
