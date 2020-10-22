@@ -7,3 +7,5 @@ python test.py --dataroot ./datasets/feret_sketch_highres --name feret_sketch_hi
 
 python test.py --dataroot ./datasets/feret_sketch_highres --name feret_sketch_my --model XBridge --direction AtoB
 python test.py --dataroot ./datasets/feret_sketch_highres --name feret_sketch_my_BtoA2 --model XBridge --direction BtoA
+
+python test.py --dataroot ./datasets/feret_sketch_highres --name feret_sketch_highres2 --model pix2pix --direction BtoA
